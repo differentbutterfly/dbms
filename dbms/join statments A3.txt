@@ -1,0 +1,190 @@
+-- Bank Database Creation
+CREATE DATABASE Bank;
+USE Bank;
+
+-- Create Tables
+CREATE TABLE Branchmaster(
+    branch_id INT PRIMARY KEY,
+    branch_name VARCHAR(50)
+);
+
+CREATE TABLE Empmaster(
+    emp_id INT PRIMARY KEY,
+    emp_name VARCHAR(50),
+    branch_id INT,
+    salary DECIMAL(10,2),
+    dept VARCHAR(50),
+    manager_id INT,
+    FOREIGN KEY (branch_id) REFERENCES Branchmaster(branch_id),
+    FOREIGN KEY (manager_id) REFERENCES Empmaster(emp_id)
+);
+
+CREATE TABLE Contactdetails(
+    emp_id INT,
+    email_id VARCHAR(100),
+    phone_no VARCHAR(15),
+    FOREIGN KEY (emp_id) REFERENCES Empmaster(emp_id) ON DELETE SET NULL
+);
+
+CREATE TABLE Empaddressdetails(
+    emp_id INT PRIMARY KEY,
+    street VARCHAR(100),
+    city VARCHAR(50),
+    state VARCHAR(50),
+    FOREIGN KEY (emp_id) REFERENCES Empmaster(emp_id) ON DELETE CASCADE
+);
+
+CREATE TABLE Branchaddress(
+    branch_id INT PRIMARY KEY,
+    city VARCHAR(50),
+    state VARCHAR(50),
+    FOREIGN KEY (branch_id) REFERENCES Branchmaster(branch_id)
+);
+
+-- Insert Data
+INSERT INTO Branchmaster VALUES
+(1, 'Vadgaon'),
+(2, 'Park street'),
+(3, 'Panvel'),
+(4, 'Pimpri'),
+(5, 'Model colony');
+
+INSERT INTO Empmaster VALUES
+(10, 'Aryan', 2, 40000, 'Manager', NULL),
+(11, 'Kiran', 4, 5000, 'Admin', 10),
+(12, 'Carol', 1, 60000, 'Assistant', 10),
+(13, 'Peter', 3, 120000, 'Senior', 10),
+(14, 'Bob', 5, 110000, 'HR', 10);
+
+INSERT INTO Contactdetails VALUES
+(11, 'kiran@gmail.com', '9890154761'),
+(10, 'aryan@gmail.com', '8806058754'),
+(13, 'peter@hotmail.com', '9373203456');
+
+INSERT INTO Branchaddress VALUES
+(1, 'Pune', 'Maharashtra'),
+(2, 'Kolkata', 'West Bengal'),
+(3, 'Mumbai', 'Maharashtra'),
+(4, 'Bangalore', 'Karnataka'),
+(5, 'Cuttack', 'Orissa');
+
+INSERT INTO Empaddressdetails VALUES
+(10, 'vadgaon', 'Pune', 'Maharashtra'),
+(11, 'Link Road', 'Mumbai', 'Maharashtra'),
+(12, 'Park street', 'Kolkata', 'West Bengal'),
+(13, 'Roha', 'Bangalore', 'Karnataka'),
+(14, 'Street road', 'Cuttack', 'Orissa');
+
+-- QUERIES:
+
+-- 2. List employee details with branch name using INNER JOIN ordered by emp_id
+SELECT e.emp_id, e.emp_name, b.branch_name 
+FROM Empmaster e 
+INNER JOIN Branchmaster b ON e.branch_id = b.branch_id 
+ORDER BY e.emp_id;
+
+-- 3. List details of employees in Admin department with branch name
+SELECT e.emp_name, e.dept, b.branch_name 
+FROM Branchmaster b, Empmaster e 
+WHERE b.branch_id = e.branch_id AND e.dept = 'Admin';
+
+-- 4. List employee name with phone no and city using INNER JOIN
+SELECT e.emp_name, c.phone_no, a.city 
+FROM Empmaster e 
+INNER JOIN Empaddressdetails a ON e.emp_id = a.emp_id 
+INNER JOIN Contactdetails c ON e.emp_id = c.emp_id;
+
+-- 5. List employee name with contact details (if any) using LEFT JOIN
+SELECT e.emp_name, c.email_id, c.phone_no 
+FROM Empmaster e 
+LEFT JOIN Contactdetails c ON e.emp_id = c.emp_id;
+
+-- 6. Delete some employees and show RIGHT JOIN
+DELETE FROM Empmaster WHERE emp_id = 12;
+DELETE FROM Empmaster WHERE emp_id = 13;
+
+-- List employee contact details irrespective of whether they are working (RIGHT JOIN)
+SELECT e.emp_name, c.email_id, c.phone_no 
+FROM Empmaster e 
+RIGHT JOIN Contactdetails c ON e.emp_id = c.emp_id;
+
+-- 7. Retrieve employee name and their respective manager name (SELF JOIN)
+SELECT e1.emp_name, e2.emp_name as Manager 
+FROM Empmaster e1, Empmaster e2 
+WHERE e1.manager_id = e2.emp_id;
+
+-- 8. List employee details with branch name using NATURAL JOIN
+SELECT e.emp_name, e.dept, b.branch_name, e.salary 
+FROM Branchmaster b 
+NATURAL JOIN Empmaster e;
+
+-- 9. List employee names who work at Vadgaon branch with their city
+SELECT e.emp_id, e.emp_name, a.city 
+FROM Empmaster e, Branchmaster b, Empaddressdetails a 
+WHERE b.branch_name = 'Vadgaon' 
+AND b.branch_id = e.branch_id 
+AND e.emp_id = a.emp_id;
+
+-- 10. Find employees at Vadgaon branch with salary > 10000
+SELECT e.emp_name, a.street, a.city, e.salary 
+FROM Empmaster e, Empaddressdetails a 
+WHERE e.emp_id = a.emp_id 
+AND e.emp_id IN (
+    SELECT e.emp_id 
+    FROM Branchmaster b, Empmaster e 
+    WHERE b.branch_name = 'Vadgaon' 
+    AND e.salary > 10000 
+    AND b.branch_id = e.branch_id
+);
+
+-- 11. Find employees who live and work in same city
+SELECT e.emp_name 
+FROM Empmaster e, Branchmaster b, Empaddressdetails a, Branchaddress c 
+WHERE e.emp_id = a.emp_id 
+AND b.branch_id = e.branch_id 
+AND c.branch_id = b.branch_id 
+AND c.city = a.city;
+
+-- 12. Find employees with salaries more than everybody at Vadgaon branch
+SELECT emp_name 
+FROM Empmaster 
+WHERE salary > ALL(
+    SELECT e.salary 
+    FROM Empmaster e, Branchmaster b 
+    WHERE e.branch_id = b.branch_id 
+    AND b.branch_name = 'Vadgaon'
+);
+
+-- 13. Create view with total employees at each branch
+CREATE VIEW TotEmp AS 
+SELECT b.branch_name, COUNT(e.emp_id) as TotalEmployees 
+FROM Empmaster e, Branchmaster b 
+WHERE e.branch_id = b.branch_id 
+GROUP BY e.branch_id, b.branch_name;
+
+SELECT * FROM TotEmp;
+
+-- 14. List branch names where employees have salary > 100000
+SELECT DISTINCT b.branch_name 
+FROM Empmaster e, Branchmaster b 
+WHERE e.branch_id = b.branch_id 
+AND e.salary > 100000;
+
+-- 15. Create view with avg and total salary at each branch
+CREATE VIEW Emp AS 
+SELECT b.branch_name, AVG(e.salary) as avg_salary, SUM(e.salary) as total_salary 
+FROM Empmaster e, Branchmaster b 
+WHERE e.branch_id = b.branch_id 
+GROUP BY e.branch_id, b.branch_name;
+
+SELECT * FROM Emp;
+
+-- 16. Find employees who do not work at Vadgaon branch
+SELECT e.emp_name 
+FROM Empmaster e, Branchmaster b 
+WHERE e.branch_id = b.branch_id 
+AND e.branch_id NOT IN (
+    SELECT branch_id 
+    FROM Branchmaster 
+    WHERE branch_name = 'Vadgaon'
+);

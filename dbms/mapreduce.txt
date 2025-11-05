@@ -1,0 +1,162 @@
+// =========================================
+// DBMS ASSIGNMENT 12
+// MAPREDUCE OPERATIONS IN MONGODB
+// =========================================
+
+// STEP 1: Create or switch to database
+use dbms_assignment12;
+
+// STEP 2: Create collection and insert sample data
+db.createCollection("orders");
+
+db.orders.insertMany([
+  {
+    Order_id: 1,
+    Cust_id: "A1",
+    Cust_name: "Aryan",
+    Phone_no: [9890151243, 8806048721],
+    Email_id: "aryan@gmail.com",
+    Item_name: "Laptop",
+    DtOfOrder: ISODate("2017-06-12"),
+    Qty: 2,
+    Amt: 90000,
+    Status: "D"
+  },
+  {
+    Order_id: 2,
+    Cust_id: "B1",
+    Cust_name: "Carol",
+    Phone_no: [9860151243, 8806048723],
+    Item_name: "Watch",
+    DtOfOrder: ISODate("2017-02-12"),
+    Qty: 3,
+    Amt: 40000,
+    Status: "P"
+  },
+  {
+    Order_id: 3,
+    Cust_id: "C1",
+    Cust_name: "Sam",
+    Phone_no: [9960151243, 8706048723],
+    Item_name: "Mobile",
+    DtOfOrder: ISODate("2017-02-12"),
+    Qty: 2,
+    Amt: 30000,
+    Status: "P"
+  },
+  {
+    Order_id: 4,
+    Cust_id: "A1",
+    Cust_name: "Aryan",
+    Phone_no: [9890151243, 8806048721],
+    Email_id: "aryan@gmail.com",
+    Item_name: "Belt",
+    DtOfOrder: ISODate("2017-09-12"),
+    Qty: 3,
+    Amt: 5000,
+    Status: "P"
+  },
+  {
+    Order_id: 5,
+    Cust_id: "B1",
+    Cust_name: "Carol",
+    Phone_no: [9860151243, 8806048723],
+    Item_name: "T-shirt",
+    DtOfOrder: ISODate("2017-08-22"),
+    Qty: 6,
+    Amt: 12000,
+    Status: "D"
+  },
+  {
+    Order_id: 6,
+    Cust_id: "C1",
+    Cust_name: "Sam",
+    Phone_no: [9960151243, 8706048723],
+    Item_name: "Jio Router",
+    DtOfOrder: ISODate("2017-02-12"),
+    Qty: 3,
+    Amt: 6000,
+    Status: "P"
+  }
+]);
+
+// =========================================
+// MAPREDUCE BASICS
+// map() → emits key-value pairs
+// reduce() → combines values for each key
+// =========================================
+
+// STEP 3: Total price per customer
+var map = function () {
+  emit(this.Cust_id, this.Amt);
+};
+
+var reduce = function (key, values) {
+  return Array.sum(values);
+};
+
+db.orders.mapReduce(map, reduce, { out: "neworders" });
+db.neworders.find().pretty();
+
+// Expected output:
+// { "_id": "A1", "value": 95000 }
+// { "_id": "B1", "value": 52000 }
+// { "_id": "C1", "value": 36000 }
+
+// STEP 4: Total price per customer where Status = 'D'
+db.orders.mapReduce(map, reduce, {
+  query: { Status: "D" },
+  out: "new1"
+});
+db.new1.find().pretty();
+
+// Expected output:
+// { "_id": "A1", "value": 90000 }
+// { "_id": "B1", "value": 12000 }
+
+// STEP 5: Total price per customer where Status = 'P'
+db.orders.mapReduce(map, reduce, {
+  query: { Status: "P" },
+  out: "new2"
+});
+db.new2.find().pretty();
+
+// Expected output:
+// { "_id": "A1", "value": 5000 }
+// { "_id": "B1", "value": 40000 }
+// { "_id": "C1", "value": 36000 }
+
+// =========================================
+// ADVANCED MAPREDUCE
+// Find count of all keys (field names) in the orders collection
+// =========================================
+
+var map1 = function () {
+  for (var key in this) {
+    emit(key, { CountOfKey: 1 });
+  }
+};
+
+var reduce1 = function (key, values) {
+  var total = 0;
+  for (var i = 0; i < values.length; i++) {
+    total += values[i].CountOfKey;
+  }
+  return { CountOfKey: total };
+};
+
+db.orders.mapReduce(map1, reduce1, { out: "new3" });
+db.new3.find().pretty();
+
+// Expected output example:
+// { "_id": "Amt", "value": { "CountOfKey": 6 } }
+// { "_id": "Cust_id", "value": { "CountOfKey": 6 } }
+// { "_id": "Cust_name", "value": { "CountOfKey": 6 } }
+// { "_id": "Email_id", "value": { "CountOfKey": 2 } }
+// { "_id": "Order_id", "value": { "CountOfKey": 6 } }
+// { "_id": "Status", "value": { "CountOfKey": 6 } }
+// { "_id": "Qty", "value": { "CountOfKey": 6 } }
+
+// =========================================
+// END OF ASSIGNMENT 12
+// =========================================

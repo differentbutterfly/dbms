@@ -1,0 +1,147 @@
+-- University Database Creation
+CREATE DATABASE University;
+USE University;
+
+-- 1. Department table with Unique constraint
+CREATE TABLE Department(
+    dept_no INT,
+    dept_name VARCHAR(15),
+    bldg_name VARCHAR(15),
+    UNIQUE(dept_name)
+);
+
+-- 2. Instructor table with NOT NULL constraint
+CREATE TABLE instructor(
+    ins_id INT,
+    ins_name VARCHAR(15) NOT NULL,
+    dept_no INT,
+    salary INT,
+    mob_no INT,
+    PRIMARY KEY(ins_id)
+);
+
+-- 3. Course table
+CREATE TABLE course(
+    course_id INT,
+    title VARCHAR(15),
+    dept_no INT,
+    credits INT,
+    PRIMARY KEY(course_id)
+);
+
+-- 4. Teaches table with Foreign Keys
+CREATE TABLE teachers(
+    teacher_id INT,
+    course_id INT,
+    semester INT,
+    year YEAR,
+    FOREIGN KEY (teacher_id) REFERENCES instructor(ins_id),
+    FOREIGN KEY (course_id) REFERENCES course(course_id)
+);
+
+-- Insert sample data
+INSERT INTO Department VALUES(1, 'comp', 'A');
+INSERT INTO Department VALUES(2, 'mech', 'B'); 
+INSERT INTO Department VALUES(3, 'IT', 'C');
+INSERT INTO Department VALUES(4, 'Elect', 'D');
+
+INSERT INTO instructor VALUES(1, 'A', 1, 10000, 10020);
+INSERT INTO instructor VALUES(2, 'B', 2, 12000, 11220);
+INSERT INTO instructor VALUES(3, 'C', 3, 10500, 11020);
+
+INSERT INTO course VALUES(101, 'Mathematics', 1, 4);
+INSERT INTO course VALUES(102, 'Physics', 2, 3);
+INSERT INTO course VALUES(103, 'Programming', 3, 4);
+
+INSERT INTO teachers VALUES(1, 101, 2, 2023);
+INSERT INTO teachers VALUES(2, 102, 1, 2023);
+INSERT INTO teachers VALUES(3, 103, 2, 2023);
+
+-- QUERIES:
+
+-- 1. Add primary key in department table
+ALTER TABLE Department ADD PRIMARY KEY(dept_no);
+
+-- 2. Add foreign key in instructor table
+ALTER TABLE instructor ADD FOREIGN KEY(dept_no) REFERENCES Department(dept_no);
+
+-- 3. Add budget column to department
+ALTER TABLE Department ADD COLUMN budget INT;
+
+-- 4. Create unique index on mobile number
+CREATE UNIQUE INDEX sr ON instructor(mob_no);
+
+-- 5. Create view without salary
+CREATE VIEW inst_view AS SELECT ins_id, ins_name, dept_no, mob_no FROM instructor;
+
+-- 6. Insert using view
+INSERT INTO inst_view VALUES(4, 'D', 4, 12000);
+
+-- 7. Update using view
+UPDATE inst_view SET dept_no = 2 WHERE ins_id = 4;
+
+-- 8. Delete using view
+DELETE FROM inst_view WHERE ins_id = 4;
+
+-- 9. Drop view
+DROP VIEW inst_view;
+
+-- 10. Remove budget column
+ALTER TABLE Department DROP budget;
+
+-- 11. Increase title field size
+ALTER TABLE course MODIFY title VARCHAR(20);
+
+-- 12. Create view with department name and salary
+CREATE VIEW newview1 AS 
+SELECT ins_name, dept_name, salary 
+FROM instructor, Department 
+WHERE instructor.dept_no = Department.dept_no;
+
+-- 13. Update salary using view
+UPDATE newview1 SET salary = 11000 WHERE ins_name = 'C';
+
+-- 14. Drop index
+ALTER TABLE instructor DROP INDEX sr;
+
+-- 15. Rename table
+RENAME TABLE course TO coursetable;
+
+-- 16. Create view with instructor and course title
+CREATE VIEW newview2 AS 
+SELECT ins_name, title 
+FROM instructor, coursetable 
+WHERE instructor.dept_no = coursetable.dept_no;
+
+-- 17. Drop primary key from department (requires removing foreign key first)
+ALTER TABLE instructor DROP FOREIGN KEY instructor_ibfk_1;
+ALTER TABLE Department DROP PRIMARY KEY;
+
+-- 18. Create student table with auto_increment and foreign key
+ALTER TABLE Department ADD PRIMARY KEY(dept_no);
+CREATE TABLE Student(
+    stud_id INT AUTO_INCREMENT,
+    stud_name VARCHAR(10),
+    dept_no INT,
+    DOB DATE,
+    FOREIGN KEY(dept_no) REFERENCES Department(dept_no),
+    PRIMARY KEY(stud_id)
+);
+
+-- Insert student data
+INSERT INTO Student(stud_name, dept_no, DOB) VALUES('AB', 1, '1997-04-12');
+INSERT INTO Student(stud_name, dept_no, DOB) VALUES('CD', 3, '1996-06-12');
+INSERT INTO Student(stud_name, dept_no, DOB) VALUES('EF', 2, '1998-09-25');
+
+-- 19. Change auto_increment sequence
+ALTER TABLE Student AUTO_INCREMENT = 5;
+INSERT INTO Student(stud_name, dept_no, DOB) VALUES('GH', 2, '1995-09-25');
+
+-- 20. Create view for computer department teachers in 5th semester
+CREATE VIEW new1 AS 
+SELECT dept_name, semester, ins_name 
+FROM Department, teachers, instructor 
+WHERE teachers.semester = 2 
+AND Department.dept_name = 'comp' 
+AND instructor.ins_id = teachers.teacher_id 
+AND instructor.dept_no = Department.dept_no;

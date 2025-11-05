@@ -1,0 +1,175 @@
+// =========================================
+// DBMS ASSIGNMENT 11
+// INDEXING AND AGGREGATION IN MONGODB
+// =========================================
+
+// STEP 1: Create or switch to database
+use dbms_assignment11;
+
+// STEP 2: Create collection and insert documents
+db.createCollection("orders");
+
+db.orders.insertMany([
+  {
+    Order_id: 1,
+    Cust_id: "A1",
+    Cust_name: "Aryan",
+    Phone_no: [9890151243, 8806048721],
+    Email_id: "aryan@gmail.com",
+    Item_name: "Laptop",
+    DtOfOrder: ISODate("2017-06-12"),
+    Qty: 2,
+    Amt: 90000,
+    Status: "D"
+  },
+  {
+    Order_id: 2,
+    Cust_id: "B1",
+    Cust_name: "Carol",
+    Phone_no: [9860151243, 8806048723],
+    Item_name: "Watch",
+    DtOfOrder: ISODate("2017-02-12"),
+    Qty: 3,
+    Amt: 40000,
+    Status: "P"
+  },
+  {
+    Order_id: 3,
+    Cust_id: "C1",
+    Cust_name: "Sam",
+    Phone_no: [9960151243, 8706048723],
+    Item_name: "Mobile",
+    DtOfOrder: ISODate("2017-02-12"),
+    Qty: 2,
+    Amt: 30000,
+    Status: "P"
+  },
+  {
+    Order_id: 4,
+    Cust_id: "A1",
+    Cust_name: "Aryan",
+    Phone_no: [9890151243, 8806048721],
+    Email_id: "aryan@gmail.com",
+    Item_name: "Belt",
+    DtOfOrder: ISODate("2017-09-12"),
+    Qty: 3,
+    Amt: 5000,
+    Status: "P"
+  },
+  {
+    Order_id: 5,
+    Cust_id: "B1",
+    Cust_name: "Carol",
+    Phone_no: [9860151243, 8806048723],
+    Item_name: "T-shirt",
+    DtOfOrder: ISODate("2017-08-22"),
+    Qty: 6,
+    Amt: 12000,
+    Status: "D"
+  },
+  {
+    Order_id: 6,
+    Cust_id: "C1",
+    Cust_name: "Sam",
+    Phone_no: [9960151243, 8706048723],
+    Item_name: "Jio Router",
+    DtOfOrder: ISODate("2017-02-12"),
+    Qty: 3,
+    Amt: 6000,
+    Status: "P"
+  }
+]);
+
+// STEP 3: Create Simple Indexes
+db.orders.createIndex({ Cust_id: 1 });
+db.orders.createIndex({ Item_name: 1 });
+
+// Display all indexes
+db.orders.getIndexes();
+
+// STEP 4: Create Unique Index on order_id
+db.orders.createIndex({ Order_id: 1 }, { unique: true });
+
+// Try inserting duplicate (will fail)
+db.orders.insert({ Order_id: 3 }); // should throw duplicate key error
+
+// STEP 5: Create Multikey Index on Phone_no
+db.orders.createIndex({ Phone_no: 1 });
+
+// Find customers having exactly 2 phone numbers
+db.orders.find({ Phone_no: { $size: 2 } }).pretty();
+
+// STEP 6: Sparse Index on Email_id (skips null fields)
+db.orders.find({ Email_id: "aryan@gmail.com" }).explain("executionStats");
+db.orders.createIndex({ Email_id: 1 }, { sparse: true });
+db.orders.find({ Email_id: "aryan@gmail.com" }).explain("executionStats");
+
+// STEP 7: Display all indexes and their total size
+db.orders.getIndexes();
+db.orders.totalIndexSize();
+
+// STEP 8: Drop Index on Cust_id
+db.orders.dropIndex({ Cust_id: 1 });
+
+// Drop all indexes
+db.orders.dropIndexes();
+
+// STEP 9: Find customers without email_id
+db.orders.find({ Email_id: { $exists: false } }).pretty();
+
+// Find customers with email_id
+db.orders.find({ Email_id: { $exists: true } }).pretty();
+
+// STEP 10: Display all distinct customer names (no repetition)
+db.orders.distinct("Cust_name");
+
+// STEP 11: Count delivered and pending orders
+db.orders.find({ Status: "D" }).count(); // delivered
+db.orders.find({ Status: "P" }).count(); // pending
+
+// STEP 12: Sort orders by amount (ascending)
+db.orders.find().sort({ Amt: 1 }).pretty();
+
+// STEP 13: Show how many orders are placed by each customer
+db.orders.aggregate([
+  { $group: { _id: "$Cust_name", cnt_of_order: { $sum: 1 } } }
+]);
+
+// STEP 14: Display total pending order amount per customer (descending)
+db.orders.aggregate([
+  { $match: { Status: "P" } },
+  { $group: { _id: "$Cust_id", pend_amt: { $sum: "$Amt" } } },
+  { $sort: { pend_amt: -1 } }
+]);
+
+// STEP 15: Display total delivered order amount per customer (ascending by id)
+db.orders.aggregate([
+  { $match: { Status: "D" } },
+  { $group: { _id: "$Cust_id", tot_amt: { $sum: "$Amt" } } },
+  { $sort: { _id: 1 } }
+]);
+
+// STEP 16: Top 3 Selling Items by Quantity
+db.orders.aggregate([
+  { $group: { _id: "$Item_name", totqty: { $sum: "$Qty" } } },
+  { $sort: { totqty: -1 } },
+  { $limit: 3 }
+]);
+
+// STEP 17: Find date with maximum number of orders
+db.orders.aggregate([
+  { $group: { _id: "$DtOfOrder", cnt_of_order: { $sum: 1 } } },
+  { $sort: { cnt_of_order: -1 } },
+  { $limit: 1 }
+]);
+
+// STEP 18: Find customer with maximum orders
+db.orders.aggregate([
+  { $group: { _id: "$Cust_name", cnt_orderid: { $sum: 1 } } },
+  { $sort: { cnt_orderid: -1 } },
+  { $limit: 1 }
+]);
+
+// =========================================
+// END OF ASSIGNMENT 11
+// =========================================
