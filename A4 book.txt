@@ -1,0 +1,81 @@
+-- 1️⃣ Create Database
+CREATE DATABASE IF NOT EXISTS LibraryDB;
+USE LibraryDB;
+
+-- 2️⃣ Create Borrower Table
+CREATE TABLE borrower_t7 (
+    roll_no INT,
+    name VARCHAR(20),
+    date_of_i DATE,
+    name_of_book VARCHAR(50),
+    status VARCHAR(10)
+);
+
+-- 3️⃣ Create Fine Table
+CREATE TABLE fine_t7 (
+    roll_no INT,
+    date_of_r DATE,
+    amt INT
+);
+
+-- 4️⃣ Insert Sample Data
+INSERT INTO borrower_t7 VALUES
+(1, 'harsh', '2017-06-12', 'harry potter', 'i'),
+(2, 'sandesh', '2017-06-15', 'iceage', 'r'),
+(3, 'Rahul', '2017-07-25', 'pokemon', 'i'),
+(4, 'sarvesh', '2017-04-20', 'duel', 'r'),
+(5, 'ishwari', '2017-05-22', 'hindikatha', 'i');
+
+
+DELIMITER //
+
+CREATE PROCEDURE calc_fine_t7(
+    IN roll INT,
+    IN b_name VARCHAR(50)
+)
+BEGIN
+    DECLARE ndays DATE;
+    DECLARE mdays INT DEFAULT 0;
+    DECLARE fine_amt INT DEFAULT 0;
+
+    -- Check if the borrower record exists
+    SELECT date_of_i INTO ndays
+    FROM borrower_t7
+    WHERE roll_no = roll AND name_of_book = b_name
+    LIMIT 1;
+
+    -- Calculate number of days since issue
+    SET mdays = DATEDIFF(CURDATE(), ndays);
+
+    -- Calculate fine amount
+    IF mdays >= 15 AND mdays < 30 THEN
+        SET fine_amt = (mdays - 15) * 5;
+    ELSEIF mdays >= 30 THEN
+        SET fine_amt = (15 * 5) + ((mdays - 30) * 50);
+    END IF;
+
+    -- Update borrower status to returned
+    UPDATE borrower_t7
+    SET status = 'r'
+    WHERE roll_no = roll AND name_of_book = b_name;
+
+    -- Insert fine record if applicable
+    IF fine_amt > 0 THEN
+        INSERT INTO fine_t7 VALUES(roll, CURDATE(), fine_amt);
+    END IF;
+END;
+//
+
+DELIMITER ;
+
+
+-- Example: Calculate fine for borrower 1 who borrowed 'harry potter'
+CALL calc_fine_t7(1, 'harry potter');
+
+-- Example: Calculate fine for borrower 3 who borrowed 'pokemon'
+CALL calc_fine_t7(3, 'pokemon');
+
+
+SELECT * FROM fine_t7;
+SELECT * FROM borrower_t7;
+

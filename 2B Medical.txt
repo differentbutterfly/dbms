@@ -1,0 +1,156 @@
+CREATE DATABASE MedicalDB;
+USE MedicalDB;
+
+
+-- 1) Create Patient Table
+CREATE TABLE Patient (
+    pat_id VARCHAR(10) PRIMARY KEY,
+    pat_name VARCHAR(50),
+    DateOfAdmit DATE,
+    age INT,
+    city VARCHAR(50)
+);
+
+-- 2) Create Doctor Table
+CREATE TABLE Doctor (
+    doc_id VARCHAR(10) PRIMARY KEY,
+    doc_name VARCHAR(50),
+    qualification VARCHAR(30),
+    experience INT,
+    dept VARCHAR(50),
+    city VARCHAR(50),
+    salary DECIMAL(10,2)
+);
+
+-- 3) Create Treats Table (With ON DELETE CASCADE)
+CREATE TABLE Treats (
+    doc_id VARCHAR(10),
+    pat_id VARCHAR(10),
+    disease VARCHAR(50),
+    FOREIGN KEY (doc_id) REFERENCES Doctor(doc_id) ON DELETE CASCADE,
+    FOREIGN KEY (pat_id) REFERENCES Patient(pat_id) ON DELETE CASCADE
+);
+
+
+-- Insert 5 records into Patient table
+INSERT INTO Patient VALUES
+('a10','Aryan','2017-05-11',20,'Mumbai'),
+('c12','Amit','2017-07-21',39,'Bangalore'),
+('d13','Anita','2017-09-25',49,'Pune'),
+('p10','Sandesh','2016-07-21',28,'Pune'),
+('x15','Suyash','2017-04-17',29,'Delhi');
+
+-- Insert 5 records into Doctor table
+INSERT INTO Doctor VALUES
+('e1','Suhas','MD',10,'Dental','Pune',70000),
+('r5','Yogesh','MD',8,'Dental','Delhi',40000),
+('s5','Mangesh','MBBS',25,'Cardiology','Bangalore',100000),
+('w8','Komal','MBBS',25,'Chemothera','Kolkata',45000),
+('y3','Shubham','MBBS',10,'Cardiology','Mumbai',60000);
+
+-- Insert 5 records into Treats table
+INSERT INTO Treats VALUES
+('w8','p10','Cancer'),
+('w8','c12','Cancer'),
+('e1','d13','Toothache'),
+('s5','x15','Heart Attack'),
+('r5','a10','Cavities');
+
+
+-- Display all records from Patient
+SELECT * FROM Patient;
+
+-- Display all records from Doctor
+SELECT * FROM Doctor;
+
+-- Display all records from Treats
+SELECT * FROM Treats;
+
+
+
+-- 3) Display the list of all doctors who are MD.
+SELECT doc_name FROM Doctor WHERE qualification = 'MD';
+
+-- 4) Display the list of all doctors whose experience > 20 years.
+SELECT doc_name FROM Doctor WHERE experience > 20;
+
+-- 5) Display patient names suffering from Cancer.
+SELECT pat_name 
+FROM Patient, Treats 
+WHERE Treats.disease = 'Cancer' 
+AND Treats.pat_id = Patient.pat_id;
+
+-- 6) Display the patient name & doctor name who is treating the Cancer patient.
+SELECT p.pat_name, d.doc_name 
+FROM Patient p, Doctor d, Treats t 
+WHERE t.disease = 'Cancer' 
+AND d.doc_id = t.doc_id 
+AND p.pat_id = t.pat_id;
+
+-- 7) Display patient names starting with 'A', ending with 'a', and having exactly 5 letters.
+SELECT pat_name FROM Patient WHERE pat_name LIKE 'A%';
+SELECT pat_name FROM Patient WHERE pat_name LIKE '%a';
+SELECT pat_name FROM Patient WHERE pat_name LIKE '_____';
+
+-- 8) Remove all the records of patient with patient_id = 'p10'.
+DELETE FROM Patient WHERE pat_id = 'p10';
+SELECT * FROM Patient;
+SELECT * FROM Treats;
+
+-- 9) Remove all records of doctor 'Suhas'.
+DELETE FROM Doctor WHERE doc_name = 'Suhas';
+SELECT * FROM Doctor;
+SELECT * FROM Treats;
+
+-- 10) Change qualification of doctor 'Shubham' from MBBS to MD.
+UPDATE Doctor SET qualification = 'MD' WHERE doc_name = 'Shubham';
+SELECT * FROM Doctor;
+
+-- 11) Give 5% salary raise to Dental doctors and 10% to Cardiology doctors.
+UPDATE Doctor 
+SET salary = CASE 
+    WHEN dept = 'Dental' THEN salary + (salary * 0.05)
+    WHEN dept = 'Cardiology' THEN salary + (salary * 0.10)
+    ELSE salary
+END;
+SELECT * FROM Doctor;
+
+-- 12) Display department-wise total salary of doctors.
+SELECT dept, SUM(salary) AS Total_Salary FROM Doctor GROUP BY dept;
+
+-- 13) Find the department with the highest average salary.
+SELECT dept, AVG(salary) AS Avg_Salary 
+FROM Doctor 
+GROUP BY dept 
+HAVING AVG(salary) >= ALL (SELECT AVG(salary) FROM Doctor GROUP BY dept);
+
+-- 14) Find the average salary of doctors in the Dental department.
+SELECT AVG(salary) AS Avg_Dental_Salary FROM Doctor WHERE dept = 'Dental';
+
+-- 15) Find departments where the average salary of doctors is more than 50,000.
+SELECT dept 
+FROM Doctor 
+GROUP BY dept 
+HAVING AVG(salary) > 50000;
+
+-- 16) Find how many doctors work in the hospital.
+SELECT COUNT(*) AS Total_Doctors FROM Doctor;
+
+-- 17) Find how many doctors have treated a patient.
+SELECT COUNT(DISTINCT doc_id) AS Doctors_Treated FROM Treats;
+
+-- 18) List the cities in which either doctor or patient lives.
+SELECT city FROM Doctor
+UNION
+SELECT city FROM Patient;
+
+-- 19) List the cities where both doctor and patient live.
+SELECT DISTINCT d.city 
+FROM Doctor d, Patient p 
+WHERE d.city = p.city;
+
+-- 20) Find out the doctors who have not treated any patient.
+SELECT doc_name, doc_id 
+FROM Doctor 
+WHERE doc_id NOT IN (SELECT DISTINCT doc_id FROM Treats);
+

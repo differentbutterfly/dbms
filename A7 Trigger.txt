@@ -1,0 +1,130 @@
+-- 1️⃣ Create Database
+CREATE DATABASE IF NOT EXISTS LibraryDB;
+USE LibraryDB;
+
+
+
+-- Library main table
+CREATE TABLE library (
+    B_id INT PRIMARY KEY,
+    Title VARCHAR(50),
+    Authors VARCHAR(50),
+    Edition INT,
+    no_of_c INT
+);
+
+-- Audit table to log changes
+CREATE TABLE lib_audit (
+    B_id INT,
+    Title VARCHAR(50),
+    Authors VARCHAR(50),
+    Edition INT,
+    no_of_c INT,
+    date_of_mod DATE,
+    type_of_op VARCHAR(10),
+    username VARCHAR(50)
+);
+
+-- Transaction table (Issue/Return)
+CREATE TABLE transaction (
+    Trans_id INT,
+    B_id INT,
+    I_R VARCHAR(1),
+    no_of_c INT
+);
+
+
+INSERT INTO library VALUES
+(101, 'Harry Potter', 'J.K. Rowling', 3, 10),
+(102, 'The Alchemist', 'Paulo Coelho', 2, 5),
+(103, 'Wings of Fire', 'A.P.J. Abdul Kalam', 5, 8);
+
+
+DELIMITER $$
+
+CREATE TRIGGER trg_library_update
+AFTER UPDATE ON library
+FOR EACH ROW
+BEGIN
+    INSERT INTO lib_audit
+    VALUES(
+        OLD.B_id, OLD.Title, OLD.Authors, OLD.Edition, OLD.no_of_c,
+        CURDATE(), 'updated', CURRENT_USER()
+    );
+END $$
+
+DELIMITER ;
+
+
+DELIMITER $$
+
+CREATE TRIGGER trg_library_delete
+AFTER DELETE ON library
+FOR EACH ROW
+BEGIN
+    INSERT INTO lib_audit
+    VALUES(
+        OLD.B_id, OLD.Title, OLD.Authors, OLD.Edition, OLD.no_of_c,
+        CURDATE(), 'deleted', CURRENT_USER()
+    );
+END $$
+
+DELIMITER ;
+
+
+DELIMITER $$
+
+CREATE TRIGGER trg_book_issue_limit
+BEFORE INSERT ON transaction
+FOR EACH ROW
+BEGIN
+    DECLARE available INT;
+    IF NEW.I_R = 'I' THEN
+        SELECT no_of_c INTO available FROM library WHERE B_id = NEW.B_id;
+        IF NEW.no_of_c > available THEN
+            SET NEW.no_of_c = available;
+        END IF;
+    END IF;
+END $$
+
+DELIMITER ;
+
+
+DELIMITER $$
+
+CREATE TRIGGER trg_update_stock
+AFTER INSERT ON transaction
+FOR EACH ROW
+BEGIN
+    IF NEW.I_R = 'I' THEN
+        UPDATE library
+        SET no_of_c = no_of_c - NEW.no_of_c
+        WHERE B_id = NEW.B_id;
+    ELSE
+        UPDATE library
+        SET no_of_c = no_of_c + NEW.no_of_c
+        WHERE B_id = NEW.B_id;
+    END IF;
+END $$
+
+DELIMITER ;
+
+
+
+-- Test 1: Insert Issue Transaction
+INSERT INTO transaction VALUES (1, 101, 'I', 3);
+
+-- Test 2: Return Books
+INSERT INTO transaction VALUES (2, 101, 'R', 1);
+
+-- Test 3: Update Book Info
+UPDATE library SET Edition = 4 WHERE B_id = 102;
+
+-- Test 4: Delete a Book
+DELETE FROM library WHERE B_id = 103;
+
+
+SELECT * FROM library;
+SELECT * FROM transaction;
+SELECT * FROM lib_audit;
+

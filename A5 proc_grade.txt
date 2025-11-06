@@ -1,0 +1,57 @@
+-- 1️⃣ Create Database
+CREATE DATABASE IF NOT EXISTS StudentDB;
+USE StudentDB;
+
+-- 2️⃣ Create studmarks Table
+CREATE TABLE studmarks (
+    Name VARCHAR(20),
+    TotalMarks INT
+);
+
+-- 3️⃣ Create result Table
+CREATE TABLE result (
+    Roll_No TINYINT,
+    Name VARCHAR(20),
+    Class VARCHAR(30)
+);
+
+
+DELIMITER $
+
+CREATE PROCEDURE proc_grade(
+    IN rollno TINYINT,
+    IN name VARCHAR(15),
+    IN marks INT
+)
+BEGIN
+    DECLARE class VARCHAR(25);
+
+    IF marks >= 990 AND marks <= 1500 THEN
+        SET class = 'Distinction';
+    ELSEIF marks >= 900 AND marks <= 989 THEN
+        SET class = 'First Class';
+    ELSEIF marks >= 825 AND marks <= 899 THEN
+        SET class = 'Second Class';
+    ELSEIF marks >= 700 AND marks <= 824 THEN
+        SET class = 'Pass';
+    ELSE
+        SET class = 'Fail';
+    END IF;
+
+    INSERT INTO studmarks VALUES(name, marks);
+    INSERT INTO result VALUES(rollno, name, class);
+END $
+DELIMITER ;
+
+
+CALL proc_grade(1, 'Aryan', 850);
+CALL proc_grade(2, 'Peter', 1000);
+CALL proc_grade(3, 'Smith', 834);
+CALL proc_grade(4, 'Carol', 750);
+CALL proc_grade(5, 'Bob', 950);
+CALL proc_grade(6, 'Sam', 650);
+
+
+SELECT * FROM studmarks;
+SELECT * FROM result;
+

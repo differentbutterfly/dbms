@@ -1,0 +1,196 @@
+// 1️⃣ Create / Switch to Database
+use OrdersDB;
+
+// 2️⃣ Create and Insert Documents into Orders Collection
+db.orders.insertMany([
+  {
+    order_id: 1,
+    cust_id: "A1",
+    cust_name: "Aryan",
+    phone_no: [9890151243, 8806048721],
+    email_id: "aryan@gmail.com",
+    item_name: "Laptop",
+    DtOfOrder: ISODate("2017-06-12T00:00:00Z"),
+    quantity: 2,
+    amount: 90000,
+    status: "D"
+  },
+  {
+    order_id: 2,
+    cust_id: "A2",
+    cust_name: "Sneha",
+    phone_no: [9823456789],
+    email_id: "sneha@gmail.com",
+    item_name: "Mobile",
+    DtOfOrder: ISODate("2017-07-10T00:00:00Z"),
+    quantity: 1,
+    amount: 30000,
+    status: "P"
+  },
+  {
+    order_id: 3,
+    cust_id: "A3",
+    cust_name: "Rahul",
+    phone_no: [9876543210, 9812345678],
+    item_name: "Tablet",
+    DtOfOrder: ISODate("2017-08-05T00:00:00Z"),
+    quantity: 3,
+    amount: 45000,
+    status: "D"
+  },
+  {
+    order_id: 4,
+    cust_id: "A1",
+    cust_name: "Aryan",
+    phone_no: [9890151243],
+    item_name: "Mouse",
+    DtOfOrder: ISODate("2017-08-12T00:00:00Z"),
+    quantity: 2,
+    amount: 2000,
+    status: "P"
+  },
+  {
+    order_id: 5,
+    cust_id: "A4",
+    cust_name: "Pooja",
+    phone_no: [9998887777],
+    item_name: "Keyboard",
+    DtOfOrder: ISODate("2017-09-01T00:00:00Z"),
+    quantity: 1,
+    amount: 2500,
+    status: "D"
+  }
+]);
+
+
+// I. Create a simple index on cust_id
+db.orders.createIndex({ cust_id: 1 });
+
+// Create a simple index on item_name
+db.orders.createIndex({ item_name: 1 });
+
+// Try inserting duplicate (will succeed because not unique)
+db.orders.insertOne({
+  order_id: 6,
+  cust_id: "A1",
+  cust_name: "Aryan",
+  phone_no: [8887776666],
+  item_name: "Laptop",
+  DtOfOrder: ISODate("2017-10-10T00:00:00Z"),
+  quantity: 1,
+  amount: 45000,
+  status: "D"
+});
+
+
+// II. Create UNIQUE index on order_id
+db.orders.createIndex({ order_id: 1 }, { unique: true });
+
+// Try to insert duplicate order_id (will cause error)
+db.orders.insertOne({
+  order_id: 1,
+  cust_id: "A5",
+  cust_name: "Ravi",
+  phone_no: [9000011111],
+  item_name: "Monitor",
+  DtOfOrder: ISODate("2017-11-10T00:00:00Z"),
+  quantity: 1,
+  amount: 12000,
+  status: "P"
+});
+
+// III. Create MULTIKEY index on phone_no
+db.orders.createIndex({ phone_no: 1 });
+
+// Find customers having 2 phone numbers
+db.orders.find({ "phone_no.1": { $exists: true } });
+
+
+// IV. Create SPARSE index on email_id
+// First, observe performance without index
+db.orders.find({ email_id: { $exists: true } }).explain("executionStats");
+
+// Apply Sparse Index
+db.orders.createIndex({ email_id: 1 }, { sparse: true });
+
+// After applying sparse index, re-run query
+db.orders.find({ email_id: { $exists: true } }).explain("executionStats");
+
+
+// V. Display all indexes and size of indexes
+db.orders.getIndexes();
+db.orders.totalIndexSize();
+
+
+// VI. Delete all indexes
+db.orders.dropIndexes();
+
+
+// VII-A) Find total number of orders received so far
+db.orders.countDocuments();
+
+// VII-B) Find how many orders are pending
+db.orders.countDocuments({ status: "P" });
+
+
+// VIII. Display all unique customer names (no repetition)
+db.orders.distinct("cust_name");
+
+
+// IX-A) Total number of orders received
+db.orders.countDocuments();
+
+// IX-B) Number of pending orders
+db.orders.countDocuments({ status: "P" });
+
+
+// X. Sort documents based on amount (descending)
+db.orders.find().sort({ amount: -1 });
+
+
+// XI. Number of orders placed by each customer
+db.orders.aggregate([
+  { $group: { _id: "$cust_name", total_orders: { $sum: 1 } } }
+]);
+
+
+// XII. Customer IDs and total pending order amount (descending)
+db.orders.aggregate([
+  { $match: { status: "P" } },
+  { $group: { _id: "$cust_id", total_pending_amount: { $sum: "$amount" } } },
+  { $sort: { total_pending_amount: -1 } }
+]);
+
+
+// XIII. Customer IDs with total delivered order amount (ascending)
+db.orders.aggregate([
+  { $match: { status: "D" } },
+  { $group: { _id: "$cust_id", total_delivered_amount: { $sum: "$amount" } } },
+  { $sort: { _id: 1 } }
+]);
+
+
+// XIV. Top 3 selling items (by total quantity)
+db.orders.aggregate([
+  { $group: { _id: "$item_name", total_qty: { $sum: "$quantity" } } },
+  { $sort: { total_qty: -1 } },
+  { $limit: 3 }
+]);
+
+
+// XV. Date on which maximum orders are received
+db.orders.aggregate([
+  { $group: { _id: "$DtOfOrder", total_orders: { $sum: 1 } } },
+  { $sort: { total_orders: -1 } },
+  { $limit: 1 }
+]);
+
+
+// XVI. Customer who placed maximum number of orders
+db.orders.aggregate([
+  { $group: { _id: "$cust_name", total_orders: { $sum: 1 } } },
+  { $sort: { total_orders: -1 } },
+  { $limit: 1 }
+]);
+
+

@@ -1,0 +1,124 @@
+
+// Switch (or create) database
+use assig2;
+
+// Drop collection if already exists
+db.Articles.drop();
+
+// I. Insert couple of documents
+db.Articles.insertMany([
+  {
+    "Title": "C",
+    "Content": "Procedural language",
+    "Author": "Yashwant Kanetkar",
+    "Author_age": 25,
+    "DOP": ISODate("2016-05-13T00:00:00Z"),
+    "Category": "IT",
+    "Comment": [
+      { "Name": "Sandesh", "Remarks": "Very Good" },
+      { "Name": "Ravi", "Remarks": "Nice" }
+    ]
+  },
+  {
+    "Title": "Python Basics",
+    "Content": "Easy to learn scripting language",
+    "Author": "Sharma",
+    "Author_age": 30,
+    "DOP": ISODate("2018-07-21T00:00:00Z"),
+    "Category": "Programming",
+    "Comment": [
+      { "Name": "Amit", "Remarks": "Very Informative" }
+    ]
+  },
+  {
+    "Title": "AI Revolution",
+    "Content": "Artificial Intelligence Overview",
+    "Author": "Rahul",
+    "Author_age": 17,
+    "DOP": ISODate("2020-09-10T00:00:00Z"),
+    "Category": "AI",
+    "Comment": [
+      { "Name": "Priya", "Remarks": "Amazing" }
+    ]
+  }
+]);
+
+// Verify inserted documents
+print("All Documents:");
+db.Articles.find().pretty();
+
+// II. Display the first document found in db
+print("\nFirst Document in Collection:");
+db.Articles.findOne();
+
+// III. Display first document belonging to Author “Sharma”
+print("\nDocument by Author 'Sharma':");
+db.Articles.findOne({ Author: "Sharma" });
+
+// IV. Modify the comment made by a certain person (e.g. "Ravi") on a certain article
+print("\nUpdating comment by Ravi...");
+db.Articles.updateOne(
+  { "Comment.Name": "Ravi" },
+  { $set: { "Comment.$.Remarks": "Excellent!" } }
+);
+
+// Verify update
+db.Articles.find({ "Comment.Name": "Ravi" }).pretty();
+
+// V. Insert record with save() method with and without _id
+print("\nInserting with save() method...");
+
+// Without specifying _id (MongoDB auto-generates one)
+db.Articles.save({
+  "Title": "Java",
+  "Content": "Object Oriented Language",
+  "Author": "James Gosling",
+  "Author_age": 45,
+  "DOP": ISODate("1995-06-01T00:00:00Z"),
+  "Category": "Programming",
+  "Comment": [{ "Name": "Sita", "Remarks": "Classic!" }]
+});
+
+// With specifying _id
+db.Articles.save({
+  "_id": ObjectId(),
+  "Title": "C++",
+  "Content": "Extension of C Language",
+  "Author": "Bjarne Stroustrup",
+  "Author_age": 40,
+  "DOP": ISODate("1985-05-13T00:00:00Z"),
+  "Category": "Programming",
+  "Comment": [{ "Name": "Rohit", "Remarks": "Good Concept" }]
+});
+
+// Verify insertion
+db.Articles.find({ Title: { $in: ["Java", "C++"] } }).pretty();
+
+// VI. Update collection with save() method (replace full document)
+print("\nUpdating full document using save()...");
+let doc = db.Articles.findOne({ Title: "Java" });
+doc.Author_age = 46;
+doc.Category = "Software";
+db.Articles.save(doc);
+
+// Verify update
+db.Articles.findOne({ Title: "Java" });
+
+// VII. Add one more comment for a particular title
+print("\nAdding new comment for 'Python Basics'...");
+db.Articles.updateOne(
+  { Title: "Python Basics" },
+  { $push: { Comment: { Name: "Neha", Remarks: "Loved It!" } } }
+);
+
+// Verify added comment
+db.Articles.findOne({ Title: "Python Basics" });
+
+// VIII. Delete documents whose author age < 18
+print("\nDeleting documents where Author_age < 18...");
+db.Articles.deleteMany({ Author_age: { $lt: 18 } });
+
+// Verify deletion
+db.Articles.find().pretty();
+
+

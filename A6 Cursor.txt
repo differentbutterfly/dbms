@@ -1,0 +1,78 @@
+CREATE DATABASE IF NOT EXISTS Implicit;
+USE Implicit;
+
+
+
+-- Drop existing tables if they exist (for clean rerun)
+DROP TABLE IF EXISTS O_RollCall;
+DROP TABLE IF EXISTS N_RollCall;
+
+
+-- Step 1: Create the original table (Old RollCall)
+CREATE TABLE O_RollCall(
+    roll_no INT PRIMARY KEY,
+    name VARCHAR(20),
+    marks INT
+);
+
+-- Step 2: Insert sample data into old table
+INSERT INTO O_RollCall VALUES (1, 'abc', 45);
+INSERT INTO O_RollCall VALUES (2, 'pqr', 55);
+INSERT INTO O_RollCall VALUES (4, 'lmn', 65);
+INSERT INTO O_RollCall VALUES (5, 'def', 75);
+
+-- Step 3: Create the new table (New RollCall)
+CREATE TABLE N_RollCall(
+    roll_no INT,
+    name VARCHAR(20),
+    marks INT
+);
+
+-- Step 4: Insert sample new data
+INSERT INTO N_RollCall VALUES (1, 'abc', 45);
+INSERT INTO N_RollCall VALUES (3, 'xyz', 45);
+INSERT INTO N_RollCall VALUES (7, 'xyzr', 95);
+INSERT INTO N_RollCall VALUES (8, 'pqrs', 65);
+
+-- Step 5: Create the stored procedure using a parameterized cursor
+DELIMITER $$
+
+CREATE PROCEDURE merge_rollcall()
+BEGIN
+    DECLARE done INT DEFAULT 0;
+    DECLARE r INT;
+    DECLARE n VARCHAR(20);
+    DECLARE m INT;
+
+    -- Cursor for new table
+    DECLARE cur1 CURSOR FOR 
+        SELECT roll_no, name, marks FROM N_RollCall;
+
+    DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
+
+    OPEN cur1;
+
+    read_loop: LOOP
+        FETCH cur1 INTO r, n, m;
+        IF done = 1 THEN
+            LEAVE read_loop;
+        END IF;
+
+        -- Insert record into O_RollCall only if roll_no not exists
+        IF NOT EXISTS (SELECT 1 FROM O_RollCall WHERE roll_no = r) THEN
+            INSERT INTO O_RollCall VALUES (r, n, m);
+        END IF;
+    END LOOP;
+
+    CLOSE cur1;
+END$$
+
+DELIMITER ;
+
+-- Step 6: Call the procedure
+CALL merge_rollcall();
+
+-- Step 7: Verify results
+SELECT * FROM O_RollCall;
+SELECT * FROM N_RollCall;
+
